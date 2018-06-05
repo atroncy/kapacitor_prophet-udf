@@ -1,1 +1,1 @@
-a udf for kapacitor using prophet
+a udf (batch) for kapacitor using prophet
