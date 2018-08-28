@@ -38,6 +38,7 @@ class ProphetHandler(Handler):
         self._changepoint_prior_scale = None
         self._growth = None
         self._cap = None
+        self._floor = None
         self._include_history = None
         self._state  = ProphetHandler.state()
         self._begin_response = None
@@ -53,6 +54,7 @@ class ProphetHandler(Handler):
         response.info.options['changepoint_prior_scale'].valueTypes.append(udf_pb2.DOUBLE)
         response.info.options['growth'].valueTypes.append(udf_pb2.STRING)
         response.info.options['cap'].valueTypes.append(udf_pb2.DOUBLE)
+        response.info.options['floor'].valueTypes.append(udf_pb2.DOUBLE)
         response.info.options['include_history'].valueTypes.append(udf_pb2.BOOL)
         return response
 
@@ -66,7 +68,9 @@ class ProphetHandler(Handler):
             elif opt.name == 'periods':	
                 self._periods = opt.values[0].intValue
             elif opt.name == 'cap':	
-                self._cap = opt.values[0].doubleValue           
+                self._cap = opt.values[0].doubleValue
+            elif opt.name == 'floor':
+                self._floor = opt.values[0].doubleValue
             elif opt.name == 'growth':	
                 self._growth = opt.values[0].stringValue
             elif opt.name == 'freq':	
@@ -127,6 +131,8 @@ class ProphetHandler(Handler):
 
         if self._cap is not None:
             df['cap'] = self._cap
+            if self._floor is not None:
+                df['floor'] = self._floor
 
         m = None
         if self._changepoint_prior_scale is not None and self._growth is not None:
@@ -151,6 +157,11 @@ class ProphetHandler(Handler):
             future = m.make_future_dataframe(periods=self._periods, include_history=self._include_history)
         else:
             future = m.make_future_dataframe(periods=self._periods)
+
+        if self._cap is not None:
+            future['cap'] = self._cap
+            if self._floor is not None:
+                future['floor'] = self._floor
 
         forecast = m.predict(future)
         logger.info('forecasted')
