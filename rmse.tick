@@ -1,0 +1,36 @@
+dbrp "test"."autogen"
+
+var src = batch
+    |query('SELECT "value" FROM "test"."autogen"."src"')
+        .period(60d)
+        .every(1m)
+        .offset(1d)
+
+var forecasted = batch
+     |query('SELECT "value" FROM "test"."autogen"."forecasted"')
+        .period(60d)
+        .every(1m)
+        .offset(1d)   
+
+// Compute percentage errors
+var errors = src
+    |join(forecasted).as('src','forecasted').tolerance(1m)
+    |log().prefix('join src.forecasted')
+    |eval(lambda: pow("forecasted.value" - "src.value", 2.0)).as('error')
+
+var sum_squared_errors = errors
+    |sum('error').as('value')
+    |log().prefix('sum_squared_errors')
+
+var count = errors
+    |count('error').as('value')
+    |log().prefix('count')
+
+sum_squared_errors
+    |join(count).as('sum_squared_errors', 'count')
+    |eval(lambda: sqrt(float("sum_squared_errors.value") / float("count.value"))).as('rmse')
+    |log().prefix('rmse')
+    |influxDBOut()
+        .database('test')
+        .retentionPolicy('autogen')
+        .measurement('rmse')

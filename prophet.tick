@@ -1,0 +1,17 @@
+dbrp "test"."autogen"
+
+
+batch
+    |query('SELECT "value" FROM "test"."autogen"."src"')
+        .align()
+        .period(30d)
+        .every(2h)
+        .offset(1d)
+    @prophet()
+        .periods(300)
+        .field('value')
+    |influxDBOut()
+        .database('test')
+        .retentionPolicy('autogen')
+        .measurement('forecasted')
+        .precision('ns')
