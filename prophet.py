@@ -8,8 +8,6 @@ from fbprophet import Prophet
 
 import pandas as pd
 
-#import numpy as np
-
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s:%(name)s: %(message)s')
 logger = logging.getLogger()
@@ -126,7 +124,6 @@ class ProphetHandler(Handler):
             y.append(a)
 
         d = {'y': y, 'ds': ds}
-        #d['y'] = np.log(d['y'])
         df = pd.DataFrame(d)
 
         if self._cap is not None:
@@ -145,7 +142,6 @@ class ProphetHandler(Handler):
             m = Prophet()
 
         logger.info('fit model')
-        logger.info(df)        
         m.fit(df)
 
         future = None
@@ -165,25 +161,22 @@ class ProphetHandler(Handler):
 
         forecast = m.predict(future)
         logger.info('forecasted')
-        logger.info(forecast)
         self._begin_response.begin.size = forecast.size
         self._agent.write_response(self._begin_response)
 
         response = udf_pb2.Response()
         for index, rows in forecast.iterrows():
             point = {'yhat': rows['yhat'], 'yhat_lower': rows['yhat_lower'], 'yhat_upper': rows['yhat_upper']}
-            logger.info(point)
+            # TODO this look bad :)
             response.point.time = int(rows['ds'].timestamp()) * 1000000000
             response.point.fieldsDouble['yhat'] = rows['yhat']
             response.point.fieldsDouble['yhat_upper'] = rows['yhat_upper']
             response.point.fieldsDouble['yhat_lower'] = rows['yhat_lower']
-            # response.point.CopyFrom(point)
             self._agent.write_response(response)
 
         response.end.CopyFrom(end_req)
         self._agent.write_response(response)
         logger.info('ending batch')
-	
 
 class accepter(object):
     _count = 0
